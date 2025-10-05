@@ -333,7 +333,7 @@ TIMM_MODELS = {
 }
 def is_clip_model(model_name):
     return model_name.startswith('openai/clip-')
-image_model_name =  'nf_resnet50'
+image_model_name =  '/home/lym/MultiPoint/models/nf_resnet50'
 if image_model_name in TIMM_MODELS.keys():
     image_encoder = timm.create_model(image_model_name, pretrained=True, num_classes=0)
 elif is_clip_model(image_model_name):

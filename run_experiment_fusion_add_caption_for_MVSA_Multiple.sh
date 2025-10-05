@@ -21,7 +21,7 @@ EVAL_STEP=100
 TEXT_MAX_LENGTH=256
 ADD_IMAGE=True
 EVALUATE_DURING_TRAINING=True
-IMAGE_MODEL_NAME=nf_resnet50
+IMAGE_MODEL_NAME=/home/lym/MultiPoint/models/nf_resnet50
 # Task specific parameters
 # The default length is 128 and the default number of samples is 16.
 # For some tasks, we use longer length or double demo (when using demonstrations, double the maximum length).
@@ -67,7 +67,7 @@ do
                         do
                             CUDA_VISIBLE_DEVICES=3 python run_new_add_caption_for_me.py \
                             --task_name $TASK \
-                            --data_dir /home/xiaocui/code/LM-CoCop/LM-BFF/k_shot_data/k-shot-caption/MVSA_Multiple-percent-$percent/not_use_beam_search/$SEED \
+                            --data_dir /home/lym/MultiPoint/datasets/mvsa-m \
                             --add_image $ADD_IMAGE \
                             --image_model_name $IMAGE_MODEL_NAME \
                             --num_image_tokens $NUM_IMAGE_TOKENS \

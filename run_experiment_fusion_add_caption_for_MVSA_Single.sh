@@ -67,7 +67,7 @@ do
                         do
                             CUDA_VISIBLE_DEVICES=2 python run_new_add_caption.py \
                             --task_name $TASK \
-                            --data_dir /home/xiaocui/code/LM-CoCop/LM-BFF/k_shot_data/k-shot-caption/MVSA_Single-percent-$percent/not_use_beam_search/$SEED \
+                            --data_dir /home/lym/MultiPoint/datasets/mvsa-s \
                             --add_image $ADD_IMAGE \
                             --image_model_name $IMAGE_MODEL_NAME \
                             --num_image_tokens $NUM_IMAGE_TOKENS \

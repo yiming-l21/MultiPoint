@@ -255,12 +255,14 @@ def tumblr_classification_metrics(task_name, preds, labels):
 
 processors_mapping = {
     "mul_mvsa_single_fusion_add_caption": AddCaptionMVSAClassificationProcessor('mul_mvsa_single_fusion_add_caption'),
+    "mul_mvsa_single_contrastive_fusion_add_caption": AddCaptionMVSAClassificationProcessor('mul_mvsa_single_contrastive_fusion_add_caption'),
     "mul_mvsa_multiple_fusion_add_caption": AddCaptionMVSAClassificationProcessor('mul_mvsa_multiple_fusion_add_caption'),
     "mul_tumblr_fusion_add_caption": AddCaptionTumblrMultimodalClassificationProcessor('mul_tumblr_fusion_add_caption'),
 }
 
 num_labels_mapping = {
     "mul_mvsa_single_fusion_add_caption": 3,
+    "mul_mvsa_single_contrastive_fusion_add_caption": 3,
 
     "mul_mvsa_multiple_fusion_add_caption": 3,
 
@@ -269,6 +271,7 @@ num_labels_mapping = {
 
 output_modes_mapping = {
     "mul_mvsa_single_fusion_add_caption":"classification",
+    "mul_mvsa_single_contrastive_fusion_add_caption": "classification",
     "mul_mvsa_multiple_fusion_add_caption": "classification",
     "mul_tumbl_fusion_add_caption": "classification",
 }
@@ -276,6 +279,7 @@ output_modes_mapping = {
 # Return a function that takes (task_name, preds, labels) as inputs
 compute_metrics_mapping = {
     "mul_mvsa_single_fusion_add_caption": multimodal_classification_metrics,
+    "mul_mvsa_single_contrastive_fusion_add_caption": multimodal_classification_metrics,
     "mul_mvsa_multiple_fusion_add_caption": multimodal_classification_metrics,
     "mul_tumbl_fusion_add_caption": tumblr_classification_metrics,
 }
