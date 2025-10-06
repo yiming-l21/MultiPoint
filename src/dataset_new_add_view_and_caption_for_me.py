@@ -120,8 +120,6 @@ def input_example_to_tuple(example):
     else:
         return [example.text_a, example.text_b]
 
-
-
 def tokenize_multipart_input(
     input_text_list, 
     max_length, 
@@ -239,10 +237,7 @@ def tokenize_multipart_input(
                 # Just natural language prompt
                 part = part.replace('_', ' ') 
                 # handle special case when T5 tokenizer might add an extra space
-                if len(part) == 1:
-                    new_tokens.append(tokenizer._convert_token_to_id(part))
-                else:
-                    new_tokens += enc(part)
+                new_tokens += enc(part)
 
             if part[:4] == 'sent' or part[1:5] == 'sent':
                 # If this part is the sentence, limit the sentence length
@@ -322,6 +317,344 @@ def tokenize_multipart_input(
 
 
 
+# def tokenize_multipart_input_add_image(
+#     input_text_list, 
+#     max_length, 
+#     tokenizer, 
+#     task_name=None, 
+#     prompt=False, 
+#     add_image=True,
+#     num_image_tokens=0,
+#     num_prompt_tokens=1,
+#     image_path_list=None,
+#     image_caption_list=None,
+#     image_transform=None,
+#     template=None,
+#     label_word_list=None, 
+#     first_sent_limit=None,
+#     other_sent_limit=None,
+#     gpt3=False,
+#     truncate_head=False,
+#     support_labels=None,
+#     use_demo=False
+# ):  
+    
+#     ###add <image> token to all_special_token
+#     if not IMAGE_TOKEN in tokenizer.all_special_tokens and not PROMPT_TOKEN in tokenizer.all_special_tokens:
+#         tokenizer.add_special_tokens(SPECIAL_TOKEN_DICT)
+
+#     def enc(text):
+#         return tokenizer.encode(text, add_special_tokens=False)
+
+
+#     def _read_image(image_path):
+#         raw = Image.open(image_path)
+#         raw = raw.convert('RGB') if raw.mode != 'RGB' else raw
+#         if isinstance(image_transform, Compose):
+#             image = image_transform(raw)
+#         elif image_transform is not None:  # HuggingFace
+#             image = image_transform(raw, return_tensors='pt')
+#             image = image['pixel_values']
+#         return raw, image
+    
+#     def _add_image_tokens(text):
+#         N = num_image_tokens
+#         if N is not None or N > 0:
+#             tokens = ' '.join([IMAGE_TOKEN for x in range(N)])
+#             text = f'{tokens} {text}'
+#         return text
+    
+#     def image_token_id():
+#         return tokenizer.convert_tokens_to_ids(IMAGE_TOKEN)
+    
+
+    
+
+#     input_ids = []
+#     attention_mask = []
+#     token_type_ids = [] # Only for BERT
+#     mask_pos = None # Position of the mask token
+
+#     image_pixel_values_list = [] ## for image pixel values
+
+#     N = num_image_tokens
+#     I = tokenizer.convert_tokens_to_ids(IMAGE_TOKEN)
+#     P = tokenizer.convert_tokens_to_ids(PROMPT_TOKEN)
+    
+#     if prompt:
+#         """
+#         Concatenate all sentences and prompts based on the provided template.
+#         Template example: '*cls*It was*mask*.*sent_0**<sep>*label_0:*sent_1**<sep>**label_1*:*sent_2**<sep>*'
+#         *xx* represent variables:
+#             *cls*: cls_token
+#             *mask*: mask_token
+#             *sep*: sep_token
+#             *sep+*: sep_token, also means +1 for segment id
+#             *sent_i*: sentence i (input_text_list[i])
+#             *sent-_i*: same as above, but delete the last token
+#             *sentl_i*: same as above, but use lower case for the first word
+#             *sentl-_i*: same as above, but use lower case for the first word and delete the last token
+#             *+sent_i*: same as above, but add a space before the sentence
+#             *+sentl_i*: same as above, but add a space before the sentence and use lower case for the first word
+#             *label_i*: label_word_list[i]
+#             *label_x*: label depends on the example id (support_labels needed). this is only used in GPT-3's in-context learning
+
+#         Use "_" to replace space.
+#         PAY ATTENTION TO SPACE!! DO NOT leave space before variables, for this will lead to extra space token.
+#         """
+#         assert template is not None
+   
+#         special_token_mapping = {
+#             'cls': tokenizer.cls_token_id, 
+#             'mask': tokenizer.mask_token_id, 
+#             'sep': tokenizer.sep_token_id, 
+#             'sep+': tokenizer.sep_token_id, 
+#             IMAGE_TOKEN: I,
+#             PROMPT_TOKEN: P
+#         }
+#         template_list = template.split('*') # Get variable list in the template
+#         # print('****************************template_list*********************************')
+#         # print('the template_list is {}'.format(template_list))
+#         '''
+#         ****************************template_list*********************************
+#         the template_list is ['', 'cls', '<image>', '<image>', 'sep+', '_The_sentense_"', 'sent_0', '"_has', 'mask', '_emotion', 'sep+', '<image>', '<image>', 'sep+', '_The_sentense_"', 'sent_1', '"_has', 'label_0', '_emotion', 'sep+', '<image>', '<image>', 'sep+', '_The_sentense_"', 'sent_2', '"_has', 'label_1', '_emotion', 'sep+', '<image>', '<image>', 'sep+', '_The_sentense_"', 'sent_3', '"_has', 'label_2', '_emotion', 'sep+', '']
+#         '''
+#         segment_id = 0 # Current segment id. Segment id +1 if encountering sep+.
+#         print("template_list:", template_list)
+#         for part_id, part in enumerate(template_list):
+#             new_tokens = []
+#             new_image = None
+#             segment_plus_1_flag = False
+
+#             if part in special_token_mapping:
+#                 if part == 'cls' and 'T5' in type(tokenizer).__name__:
+#                     # T5 does not have cls token
+#                     continue
+#                 if part == PROMPT_TOKEN:
+#                     for p in range(num_prompt_tokens):
+#                         new_tokens.append(special_token_mapping[part])
+#                 else:
+#                     new_tokens.append(special_token_mapping[part])
+#                 if part == 'sep+':
+#                     segment_plus_1_flag = True
+#             elif part[:6] == 'label_':
+#                 # Note that label_word_list already has extra space, so do not add more space ahead of it.
+#                 label_id = int(part.split('_')[1])
+#                 label_word = label_word_list[label_id]
+#                 new_tokens.append(label_word)
+#             elif part[:7] == 'labelx_':
+#                 instance_id = int(part.split('_')[1])
+#                 label_id = support_labels[instance_id]
+#                 label_word = label_word_list[label_id]
+#                 new_tokens.append(label_word)
+#             elif part[:5] == 'sent_':
+#                 sent_id = int(part.split('_')[1])
+#                 new_input_token = enc(input_text_list[sent_id])
+#                 if 'tumblr' in task_name :
+#                     if use_demo==True:
+#                         if len(new_input_token) >=45: ###tumblr数据有的太长，截断
+#                             new_input_token = new_input_token[:45]
+#                     else:
+#                         if len(new_input_token) >=400: ###tumblr数据有的太长，截断
+#                             new_input_token = new_input_token[:400] 
+               
+#                 new_tokens += new_input_token
+                
+#             elif part[:6] == '+sent_':
+#                 # Add space
+#                 sent_id = int(part.split('_')[1])
+#                 new_input_token = enc(' ' + input_text_list[sent_id])
+#                 # if N is not None or N > 0:
+#                 #     new_input_token = + [special_token_mapping['sep+']] + new_input_token
+#                 new_tokens += new_input_token
+
+#             elif part[:6] == 'sent-_':
+#                 # Delete the last token
+#                 sent_id = int(part.split('_')[1])
+#                 new_input_token = enc(input_text_list[sent_id][:-1])
+
+#                 # if N is not None or N > 0:
+#                 #     new_input_token = [special_token_mapping['sep+']] + new_input_token
+#                 new_tokens += new_input_token
+
+#             elif part[:6] == 'sentl_':
+#                 # Lower case the first token
+#                 sent_id = int(part.split('_')[1])
+#                 text = input_text_list[sent_id]
+#                 text = text[:1].lower() + text[1:]
+#                 new_input_token = enc(text)
+#                 # if N is not None or N > 0:
+#                 #     new_input_token = [special_token_mapping['sep+']] + new_input_token
+#                 new_tokens += new_input_token
+
+#             elif part[:7] == '+sentl_':
+#                 # Lower case the first token and add space 
+#                 sent_id = int(part.split('_')[1])
+#                 text = input_text_list[sent_id]
+#                 text = text[:1].lower() + text[1:]
+#                 new_input_token = enc(' ' + text)
+#                 # if N is not None or N > 0:
+#                 #     new_input_token = [special_token_mapping['sep+']] + new_input_token
+#                 new_tokens += new_input_token
+    
+#             elif part[:7] == 'sentl-_':
+#                 # Lower case the first token and discard the last token
+#                 sent_id = int(part.split('_')[1])
+#                 text = input_text_list[sent_id]
+#                 text = text[:1].lower() + text[1:]
+#                 new_input_token = enc(text[:-1])
+#                 # if N is not None or N > 0:
+#                 #     new_input_token = [special_token_mapping['sep+']] + new_input_token
+#                 new_tokens += new_input_token
+            
+#             elif part[:6] == 'sentu_':
+#                 # Upper case the first token
+#                 sent_id = int(part.split('_')[1])
+#                 text = input_text_list[sent_id]
+#                 text = text[:1].upper() + text[1:]
+#                 new_input_token = enc(text)
+#                 # if N is not None or N > 0:
+#                 #     new_input_token = [special_token_mapping['sep+']] + new_input_token
+#                 new_tokens += new_input_token
+
+#             elif part[:7] == '+sentu_':
+#                 # Upper case the first token and add space
+#                 sent_id = int(part.split('_')[1])
+#                 text = input_text_list[sent_id]
+#                 text = text[:1].upper() + text[1:]
+#                 new_input_token = enc(' ' + text)
+#                 # if N is not None or N > 0:
+#                 #     new_input_token = [special_token_mapping['sep+']] + new_input_token
+#                 new_tokens += new_input_token
+#             ###<image>_'id'
+#             elif part[:8] == '<image>_':
+#                 ###read_image
+#                 sent_id = int(part.split('_')[1])
+#                 raw, image = _read_image(image_path_list[sent_id])
+#                 new_image = image
+#                 image_pixel_values_list.append(new_image)
+            
+#                 for i in range(N):
+#                     new_tokens  += [I]
+#             elif part[:8] == 'caption_':
+#                 ##encode image_caption
+#                 # Add space
+#                 sent_id = int(part.split('_')[1])
+#                 new_caption_token = enc(' ' + image_caption_list[sent_id])
+#                 # if N is not None or N > 0:
+#                 #     new_input_token = + [special_token_mapping['sep+']] + new_input_token
+#                 new_tokens += new_caption_token
+
+#             else:
+#                 # Just natural language prompt
+#                 part = part.replace('_', ' ') 
+#                 # handle special case when T5 tokenizer might add an extra space
+#                 new_tokens += enc(part)
+
+#             if (part[:4] == 'sent' or part[1:5] == 'sent') and part!=' sentiment of text :' and part!=' sentiment':
+#                 # If this part is the sentence, limit the sentence length
+#                 sent_id = int(part.split('_')[1])
+#                 if sent_id == 0:
+#                     if first_sent_limit is not None:
+#                         new_tokens = new_tokens[:first_sent_limit]
+#                 else:
+#                     if other_sent_limit is not None:
+#                         new_tokens = new_tokens[:other_sent_limit]
+            
+#             input_ids += new_tokens
+
+#             attention_mask += [1 for i in range(len(new_tokens))]
+#             token_type_ids += [segment_id for i in range(len(new_tokens))]
+
+#             if segment_plus_1_flag:
+#                 segment_id += 1
+#     else:
+#         input_ids = [tokenizer.cls_token_id]
+#         attention_mask = [1]
+#         token_type_ids = [0]
+
+#         for i in range(N):
+#             input_ids += [I]
+#             attention_mask += [1]
+#             token_type_ids += [0]
+
+#         for sent_id, input_text in enumerate(input_text_list):
+#             if input_text is None:
+#                 # Do not have text_b
+#                 continue
+#             if pd.isna(input_text) or input_text is None:
+#                 # Empty input
+#                 input_text = ''
+#             input_tokens = enc(input_text) + [tokenizer.sep_token_id]
+
+#             raw, image = _read_image(image_path_list[sent_id])
+#             new_image = image
+#             # if N is not None or N > 0:
+#             #     input_tokens = [I for i in range(N)] + [special_token_mapping['sep+']] + input_tokens
+
+#             input_ids += input_tokens
+
+#             image_pixel_values_list.append(new_image)
+
+#             attention_mask += [1 for i in range(len(input_tokens))]
+#             token_type_ids += [sent_id for i in range(len(input_tokens))]
+
+#         if 'T5' in type(tokenizer).__name__: # T5 does not have CLS token
+#             input_ids = input_ids[1:]
+#             attention_mask = attention_mask[1:]
+#             token_type_ids = token_type_ids[1:]
+
+    
+    
+#     # Padding
+#     if first_sent_limit is not None and len(input_ids) > max_length:
+#         # If using sentence limit, the total length still exceeds the maximum limit, report a warning
+#         logger.warn("Input exceeds max_length limit: {}".format(tokenizer.decode(input_ids)))
+
+#     while len(input_ids) < max_length:
+#         input_ids.append(tokenizer.pad_token_id)
+#         attention_mask.append(0)
+#         token_type_ids.append(0)
+#     print(len(input_ids))
+#     # Truncate
+#     if len(input_ids) > max_length:
+#         if truncate_head:
+#             input_ids = input_ids[-max_length:]
+#             attention_mask = attention_mask[-max_length:]
+#             token_type_ids = token_type_ids[-max_length:]
+#         else:
+#             # Default is to truncate the tail
+#             input_ids = input_ids[:max_length]
+#             attention_mask = attention_mask[:max_length]
+#             token_type_ids = token_type_ids[:max_length]
+    
+#     image_token_mask = torch.tensor(input_ids) == image_token_id() ###tensor类型
+#     image_token_mask = image_token_mask.numpy().tolist() ###tensor-->list 元素为bool
+#     image_token_mask = [int(i) for i in image_token_mask] ###元素转为int
+
+#     # Find mask token
+#     if prompt:
+#         mask_pos = [input_ids.index(tokenizer.mask_token_id)]
+#         # Make sure that the masked position is inside the max_length
+#         assert mask_pos[0] < max_length
+
+#     if len(image_pixel_values_list)>0:
+#         image_pixel_values_list = torch.stack(image_pixel_values_list).squeeze()
+
+#     result = {'input_ids': input_ids, 
+#               'attention_mask': attention_mask, 
+#               'image_pixel_values_list':image_pixel_values_list, 
+#               'image_token_mask': image_token_mask}
+
+#     if 'BERT' in type(tokenizer).__name__:
+#         # Only provide token type ids for BERT
+#         result['token_type_ids'] = token_type_ids
+
+#     if prompt:
+#         result['mask_pos'] = mask_pos
+
+#     return result
+
 def tokenize_multipart_input_add_image(
     input_text_list, 
     max_length, 
@@ -343,14 +676,12 @@ def tokenize_multipart_input_add_image(
     support_labels=None,
     use_demo=False
 ):  
-    
-    ###add <image> token to all_special_token
-    if not IMAGE_TOKEN in tokenizer.all_special_tokens and not PROMPT_TOKEN in tokenizer.all_special_tokens:
+    # 确保特符存在（注意：模型侧需要 resize_token_embeddings）
+    if (IMAGE_TOKEN not in tokenizer.all_special_tokens) or (PROMPT_TOKEN not in tokenizer.all_special_tokens):
         tokenizer.add_special_tokens(SPECIAL_TOKEN_DICT)
 
-    def enc(text):
+    def enc(text: str):
         return tokenizer.encode(text, add_special_tokens=False)
-
 
     def _read_image(image_path):
         raw = Image.open(image_path)
@@ -362,51 +693,29 @@ def tokenize_multipart_input_add_image(
             image = image['pixel_values']
         return raw, image
     
-    def _add_image_tokens(text):
+    def _add_image_tokens(text: str):
         N = num_image_tokens
-        if N is not None or N > 0:
-            tokens = ' '.join([IMAGE_TOKEN for x in range(N)])
+        # ★ 修正 or -> and
+        if N is not None and N > 0:
+            tokens = ' '.join([IMAGE_TOKEN for _ in range(N)])
             text = f'{tokens} {text}'
         return text
     
     def image_token_id():
         return tokenizer.convert_tokens_to_ids(IMAGE_TOKEN)
-    
-
-    
 
     input_ids = []
     attention_mask = []
-    token_type_ids = [] # Only for BERT
-    mask_pos = None # Position of the mask token
+    token_type_ids = []  # Only for BERT
+    mask_pos = None
 
-    image_pixel_values_list = [] ## for image pixel values
+    image_pixel_values_list = []  # for image pixel values
 
     N = num_image_tokens
     I = tokenizer.convert_tokens_to_ids(IMAGE_TOKEN)
     P = tokenizer.convert_tokens_to_ids(PROMPT_TOKEN)
     
     if prompt:
-        """
-        Concatenate all sentences and prompts based on the provided template.
-        Template example: '*cls*It was*mask*.*sent_0**<sep>*label_0:*sent_1**<sep>**label_1*:*sent_2**<sep>*'
-        *xx* represent variables:
-            *cls*: cls_token
-            *mask*: mask_token
-            *sep*: sep_token
-            *sep+*: sep_token, also means +1 for segment id
-            *sent_i*: sentence i (input_text_list[i])
-            *sent-_i*: same as above, but delete the last token
-            *sentl_i*: same as above, but use lower case for the first word
-            *sentl-_i*: same as above, but use lower case for the first word and delete the last token
-            *+sent_i*: same as above, but add a space before the sentence
-            *+sentl_i*: same as above, but add a space before the sentence and use lower case for the first word
-            *label_i*: label_word_list[i]
-            *label_x*: label depends on the example id (support_labels needed). this is only used in GPT-3's in-context learning
-
-        Use "_" to replace space.
-        PAY ATTENTION TO SPACE!! DO NOT leave space before variables, for this will lead to extra space token.
-        """
         assert template is not None
    
         special_token_mapping = {
@@ -417,252 +726,227 @@ def tokenize_multipart_input_add_image(
             IMAGE_TOKEN: I,
             PROMPT_TOKEN: P
         }
-        template_list = template.split('*') # Get variable list in the template
-        # print('****************************template_list*********************************')
-        # print('the template_list is {}'.format(template_list))
-        '''
-        ****************************template_list*********************************
-        the template_list is ['', 'cls', '<image>', '<image>', 'sep+', '_The_sentense_"', 'sent_0', '"_has', 'mask', '_emotion', 'sep+', '<image>', '<image>', 'sep+', '_The_sentense_"', 'sent_1', '"_has', 'label_0', '_emotion', 'sep+', '<image>', '<image>', 'sep+', '_The_sentense_"', 'sent_2', '"_has', 'label_1', '_emotion', 'sep+', '<image>', '<image>', 'sep+', '_The_sentense_"', 'sent_3', '"_has', 'label_2', '_emotion', 'sep+', '']
-        '''
-        segment_id = 0 # Current segment id. Segment id +1 if encountering sep+.
+        template_list = template.split('*')
+        segment_id = 0
 
-        for part_id, part in enumerate(template_list):
+        # print("template_list:", template_list)
+
+        for part in template_list:
             new_tokens = []
             new_image = None
             segment_plus_1_flag = False
 
             if part in special_token_mapping:
+                # 处理特殊占位
                 if part == 'cls' and 'T5' in type(tokenizer).__name__:
-                    # T5 does not have cls token
-                    continue
-                if part == PROMPT_TOKEN:
-                    for p in range(num_prompt_tokens):
+                    pass  # T5无cls
+                elif part == PROMPT_TOKEN:
+                    for _ in range(num_prompt_tokens):
                         new_tokens.append(special_token_mapping[part])
                 else:
                     new_tokens.append(special_token_mapping[part])
                 if part == 'sep+':
                     segment_plus_1_flag = True
+
             elif part[:6] == 'label_':
-                # Note that label_word_list already has extra space, so do not add more space ahead of it.
                 label_id = int(part.split('_')[1])
                 label_word = label_word_list[label_id]
                 new_tokens.append(label_word)
+
             elif part[:7] == 'labelx_':
                 instance_id = int(part.split('_')[1])
                 label_id = support_labels[instance_id]
                 label_word = label_word_list[label_id]
                 new_tokens.append(label_word)
+
             elif part[:5] == 'sent_':
                 sent_id = int(part.split('_')[1])
                 new_input_token = enc(input_text_list[sent_id])
-                if 'tumblr' in task_name :
-                    if use_demo==True:
-                        if len(new_input_token) >=45: ###tumblr数据有的太长，截断
+                if 'tumblr' in task_name:
+                    if use_demo:
+                        if len(new_input_token) >= 45:
                             new_input_token = new_input_token[:45]
                     else:
-                        if len(new_input_token) >=400: ###tumblr数据有的太长，截断
-                            new_input_token = new_input_token[:400] 
-               
+                        if len(new_input_token) >= 400:
+                            new_input_token = new_input_token[:400]
                 new_tokens += new_input_token
-                
+
             elif part[:6] == '+sent_':
-                # Add space
                 sent_id = int(part.split('_')[1])
-                new_input_token = enc(' ' + input_text_list[sent_id])
-                # if N is not None or N > 0:
-                #     new_input_token = + [special_token_mapping['sep+']] + new_input_token
-                new_tokens += new_input_token
+                new_tokens += enc(' ' + input_text_list[sent_id])
 
             elif part[:6] == 'sent-_':
-                # Delete the last token
                 sent_id = int(part.split('_')[1])
-                new_input_token = enc(input_text_list[sent_id][:-1])
-
-                # if N is not None or N > 0:
-                #     new_input_token = [special_token_mapping['sep+']] + new_input_token
-                new_tokens += new_input_token
+                new_tokens += enc(input_text_list[sent_id][:-1])
 
             elif part[:6] == 'sentl_':
-                # Lower case the first token
                 sent_id = int(part.split('_')[1])
                 text = input_text_list[sent_id]
                 text = text[:1].lower() + text[1:]
-                new_input_token = enc(text)
-                # if N is not None or N > 0:
-                #     new_input_token = [special_token_mapping['sep+']] + new_input_token
-                new_tokens += new_input_token
+                new_tokens += enc(text)
 
             elif part[:7] == '+sentl_':
-                # Lower case the first token and add space 
                 sent_id = int(part.split('_')[1])
                 text = input_text_list[sent_id]
                 text = text[:1].lower() + text[1:]
-                new_input_token = enc(' ' + text)
-                # if N is not None or N > 0:
-                #     new_input_token = [special_token_mapping['sep+']] + new_input_token
-                new_tokens += new_input_token
+                new_tokens += enc(' ' + text)
     
             elif part[:7] == 'sentl-_':
-                # Lower case the first token and discard the last token
                 sent_id = int(part.split('_')[1])
                 text = input_text_list[sent_id]
                 text = text[:1].lower() + text[1:]
-                new_input_token = enc(text[:-1])
-                # if N is not None or N > 0:
-                #     new_input_token = [special_token_mapping['sep+']] + new_input_token
-                new_tokens += new_input_token
+                new_tokens += enc(text[:-1])
             
             elif part[:6] == 'sentu_':
-                # Upper case the first token
                 sent_id = int(part.split('_')[1])
                 text = input_text_list[sent_id]
                 text = text[:1].upper() + text[1:]
-                new_input_token = enc(text)
-                # if N is not None or N > 0:
-                #     new_input_token = [special_token_mapping['sep+']] + new_input_token
-                new_tokens += new_input_token
+                new_tokens += enc(text)
 
             elif part[:7] == '+sentu_':
-                # Upper case the first token and add space
                 sent_id = int(part.split('_')[1])
                 text = input_text_list[sent_id]
                 text = text[:1].upper() + text[1:]
-                new_input_token = enc(' ' + text)
-                # if N is not None or N > 0:
-                #     new_input_token = [special_token_mapping['sep+']] + new_input_token
-                new_tokens += new_input_token
-            ###<image>_'id'
+                new_tokens += enc(' ' + text)
+
             elif part[:8] == '<image>_':
-                ###read_image
+                # 读取对应图片并插入 N 个 image 占位 id
                 sent_id = int(part.split('_')[1])
                 raw, image = _read_image(image_path_list[sent_id])
                 new_image = image
                 image_pixel_values_list.append(new_image)
-            
-                for i in range(N):
-                    new_tokens  += [I]
+                for _ in range(N):
+                    new_tokens.append(I)
+
             elif part[:8] == 'caption_':
-                ##encode image_caption
-                # Add space
                 sent_id = int(part.split('_')[1])
-                new_caption_token = enc(' ' + image_caption_list[sent_id])
-                # if N is not None or N > 0:
-                #     new_input_token = + [special_token_mapping['sep+']] + new_input_token
-                new_tokens += new_caption_token
+                new_tokens += enc(' ' + image_caption_list[sent_id])
 
             else:
-                # Just natural language prompt
-                part = part.replace('_', ' ') 
-                # handle special case when T5 tokenizer might add an extra space
-                if len(part) == 1:
-                    new_tokens.append(tokenizer._convert_token_to_id(part))
-                else:
-                    new_tokens += enc(part)
+                # 普通文本片段（下划线代表空格）
+                part = part.replace('_', ' ')
+                new_tokens += enc(part)
 
-            if (part[:4] == 'sent' or part[1:5] == 'sent') and part!=' sentiment of text :' and part!=' sentiment':
-                # If this part is the sentence, limit the sentence length
+            # 针对 sent 片段的长度上限
+            if (part[:4] == 'sent' or part[1:5] == 'sent') and part not in (' sentiment of text :', ' sentiment'):
                 sent_id = int(part.split('_')[1])
-                if sent_id == 0:
-                    if first_sent_limit is not None:
-                        new_tokens = new_tokens[:first_sent_limit]
-                else:
-                    if other_sent_limit is not None:
-                        new_tokens = new_tokens[:other_sent_limit]
+                if sent_id == 0 and first_sent_limit is not None:
+                    new_tokens = new_tokens[:first_sent_limit]
+                elif sent_id != 0 and other_sent_limit is not None:
+                    new_tokens = new_tokens[:other_sent_limit]
             
             input_ids += new_tokens
-
-            attention_mask += [1 for i in range(len(new_tokens))]
-            token_type_ids += [segment_id for i in range(len(new_tokens))]
-
+            attention_mask += [1] * len(new_tokens)
+            token_type_ids += [segment_id] * len(new_tokens)
             if segment_plus_1_flag:
                 segment_id += 1
+
     else:
         input_ids = [tokenizer.cls_token_id]
         attention_mask = [1]
         token_type_ids = [0]
 
-        for i in range(N):
-            input_ids += [I]
-            attention_mask += [1]
-            token_type_ids += [0]
+        for _ in range(N):
+            input_ids.append(I)
+            attention_mask.append(1)
+            token_type_ids.append(0)
 
         for sent_id, input_text in enumerate(input_text_list):
-            if input_text is None:
-                # Do not have text_b
-                continue
-            if pd.isna(input_text) or input_text is None:
-                # Empty input
+            if input_text is None or (pd.isna(input_text) if 'pd' in globals() else False):
                 input_text = ''
             input_tokens = enc(input_text) + [tokenizer.sep_token_id]
 
             raw, image = _read_image(image_path_list[sent_id])
-            new_image = image
-            # if N is not None or N > 0:
-            #     input_tokens = [I for i in range(N)] + [special_token_mapping['sep+']] + input_tokens
+            image_pixel_values_list.append(image)
 
             input_ids += input_tokens
+            attention_mask += [1] * len(input_tokens)
+            token_type_ids += [sent_id] * len(input_tokens)
 
-            image_pixel_values_list.append(new_image)
-
-            attention_mask += [1 for i in range(len(input_tokens))]
-            token_type_ids += [sent_id for i in range(len(input_tokens))]
-
-        if 'T5' in type(tokenizer).__name__: # T5 does not have CLS token
+        if 'T5' in type(tokenizer).__name__:
             input_ids = input_ids[1:]
             attention_mask = attention_mask[1:]
             token_type_ids = token_type_ids[1:]
 
-    
-    
-    # Padding
+    # ---------------- 长度处理：日志 + 截断 + 硬上限兜底 ----------------
     if first_sent_limit is not None and len(input_ids) > max_length:
-        # If using sentence limit, the total length still exceeds the maximum limit, report a warning
         logger.warn("Input exceeds max_length limit: {}".format(tokenizer.decode(input_ids)))
 
+    # pad 到 max_length（你的逻辑）
     while len(input_ids) < max_length:
         input_ids.append(tokenizer.pad_token_id)
         attention_mask.append(0)
         token_type_ids.append(0)
 
-    # Truncate
+    # 根据设置截断（头/尾）
     if len(input_ids) > max_length:
         if truncate_head:
             input_ids = input_ids[-max_length:]
             attention_mask = attention_mask[-max_length:]
             token_type_ids = token_type_ids[-max_length:]
         else:
-            # Default is to truncate the tail
             input_ids = input_ids[:max_length]
             attention_mask = attention_mask[:max_length]
             token_type_ids = token_type_ids[:max_length]
-    
-    image_token_mask = torch.tensor(input_ids) == image_token_id() ###tensor类型
-    image_token_mask = image_token_mask.numpy().tolist() ###tensor-->list 元素为bool
-    image_token_mask = [int(i) for i in image_token_mask] ###元素转为int
 
-    # Find mask token
+    # ★ 再做一次硬兜底（RoBERTa 建议 512）
+    HARD_CAP = 512
+    if len(input_ids) > HARD_CAP:
+        input_ids = input_ids[:HARD_CAP]
+        attention_mask = attention_mask[:HARD_CAP]
+        token_type_ids = token_type_ids[:HARD_CAP]
+
+    # ---------------- image_token_mask ----------------
+    image_token_mask = (torch.tensor(input_ids) == image_token_id()).numpy().astype(int).tolist()
+
+    # ---------------- 安全地寻找 mask_pos（本次崩溃修复点）----------------
     if prompt:
-        mask_pos = [input_ids.index(tokenizer.mask_token_id)]
-        # Make sure that the masked position is inside the max_length
-        assert mask_pos[0] < max_length
+        mask_pos = None
+        # 1) 优先找 <mask>
+        try:
+            idx = input_ids.index(tokenizer.mask_token_id)
+            mask_pos = [idx]
+        except ValueError:
+            mask_pos = None
 
-    if len(image_pixel_values_list)>0:
+        # 2) 没有 <mask>，用 <prompt> 第一个位置兜底
+        if mask_pos is None:
+            try:
+                prompt_id = tokenizer.convert_tokens_to_ids(PROMPT_TOKEN)
+                idx = input_ids.index(prompt_id)
+                mask_pos = [idx]
+            except ValueError:
+                mask_pos = None
+
+        # 3) 再没有就用 <s>/CLS 或 0 位
+        if mask_pos is None:
+            if tokenizer.cls_token_id in input_ids:
+                mask_pos = [input_ids.index(tokenizer.cls_token_id)]
+            else:
+                mask_pos = [0]
+
+        # 保证在截断后的长度内
+        if mask_pos[0] >= len(input_ids):
+            mask_pos = [len(input_ids) - 1]
+
+    # ---------------- 打包返回 ----------------
+    if len(image_pixel_values_list) > 0:
         image_pixel_values_list = torch.stack(image_pixel_values_list).squeeze()
 
-    result = {'input_ids': input_ids, 
-              'attention_mask': attention_mask, 
-              'image_pixel_values_list':image_pixel_values_list, 
-              'image_token_mask': image_token_mask}
+    result = {
+        'input_ids': input_ids, 
+        'attention_mask': attention_mask, 
+        'image_pixel_values_list': image_pixel_values_list, 
+        'image_token_mask': image_token_mask
+    }
 
     if 'BERT' in type(tokenizer).__name__:
-        # Only provide token type ids for BERT
         result['token_type_ids'] = token_type_ids
 
     if prompt:
         result['mask_pos'] = mask_pos
 
     return result
-
 
 
 class FewShotDataset_AddCaption(torch.utils.data.Dataset):
@@ -693,15 +977,20 @@ class FewShotDataset_AddCaption(torch.utils.data.Dataset):
             self.label_to_word = eval(args.mapping)
 
             for key in self.label_to_word:
-                # For RoBERTa/BART/T5, tokenization also considers space, so we use space+word as label words.
                 if self.label_to_word[key][0] not in ['<', '[', '.', ',']:
-                    # Make sure space+word is in the vocabulary
-                    assert len(tokenizer.tokenize(' ' + self.label_to_word[key])) == 1
-                    self.label_to_word[key] = tokenizer._convert_token_to_id(tokenizer.tokenize(' ' + self.label_to_word[key])[0])
+                    tok_list = tokenizer.tokenize(' ' + self.label_to_word[key])
+                    assert len(tok_list) == 1, (
+                        f"Label '{key}' -> '{self.label_to_word[key]}' 未被分成单个 token；"
+                        f"请确认使用了 add_prefix_space=True，或更换一个映射词。"
+                    )
+                    tok_id = tokenizer.convert_tokens_to_ids(tok_list[0])
                 else:
-                    self.label_to_word[key] = tokenizer._convert_token_to_id(self.label_to_word[key])
-                logger.info("Label {} to word {} ({})".format(key, tokenizer._convert_id_to_token(self.label_to_word[key]), self.label_to_word[key]))
-            
+                    tok_id = tokenizer.convert_tokens_to_ids(self.label_to_word[key])
+
+                self.label_to_word[key] = tok_id
+                tok_str = tokenizer.convert_ids_to_tokens([tok_id])[0]
+                logger.info("Label %s to word %s (%d)", key, tok_str, tok_id)
+
             if len(self.label_list) > 1:
                 self.label_word_list = [self.label_to_word[label] for label in self.label_list]
             else:
@@ -746,7 +1035,7 @@ class FewShotDataset_AddCaption(torch.utils.data.Dataset):
 
             if os.path.exists(cached_features_file) and not args.overwrite_cache:
                 start = time.time()
-                self.support_examples, self.query_examples = torch.load(cached_features_file)
+                self.support_examples, self.query_examples = torch.load(cached_features_file, weights_only=False)
                 logger.info(
                     f"Loading features from cached file {cached_features_file} [took %.3f s]", time.time() - start
                 )
@@ -2156,6 +2445,7 @@ def main():
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
         additional_special_tokens=special_tokens,
         cache_dir=model_args.cache_dir,
+        add_prefix_space=True,
             )
 
     train_dataset = (

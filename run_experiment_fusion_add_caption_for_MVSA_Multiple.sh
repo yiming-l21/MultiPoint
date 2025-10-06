@@ -6,10 +6,10 @@
 # LR: learning rate (recommendation: 1e-5 / 2e-5 / 5e-5)
 # SEED: random seed (13 / 21 / 42 / 87 / 100)
 # MODEL: pre-trained model name (roberta-*, bert-*), see Transformers model list
-
+export TOKENIZERS_PARALLELISM=false
 # Number of training instances per label
 TASK=Mul_MVSA_Multiple_Contrastive_Fusion_Add_Caption
-MODEL=roberta-large
+MODEL=/home/lym/MultiPoint/models/roberta-large
 TYPE=prompt-demo
 TAG=######################################################################\n
 # Training steps
@@ -18,7 +18,7 @@ MAX_STEP=1000
 # Validation steps
 EVAL_STEP=100
 
-TEXT_MAX_LENGTH=256
+TEXT_MAX_LENGTH=512
 ADD_IMAGE=True
 EVALUATE_DURING_TRAINING=True
 IMAGE_MODEL_NAME=/home/lym/MultiPoint/models/nf_resnet50
@@ -37,7 +37,7 @@ TEMPLATE3=*cls*$IMAGE_TOKEN*is*caption_0*sep+*$PROMPT_TOKEN*mask*$PROMPT_TOKEN*s
 TEMPLATE4=*cls*$IMAGE_TOKEN*is*caption_0*sep+*Text_:_\"*sent_0*\"_.*_sentiment_of_text_:*mask*.*sep+* 
 
 MAPPING="{'negative':'terrible','neutral':'okay','positive':'great'}"
-TASK_EXTRA="--max_seq_len 256"
+TASK_EXTRA="--max_seq_len 512"
 
 # Gradient accumulation steps
 # For medium-sized GPUs (e.g., 2080ti with 10GB memory), they can only take 
@@ -61,7 +61,7 @@ do
             do
                 for train_batch_size in 8
                 do
-                    for lr in 3e-6
+                    for lr in 5e-6 1e-6 3e-6 1e-5
                     do
                         for SEED in 13 #21 42 87 100 
                         do

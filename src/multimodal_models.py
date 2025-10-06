@@ -503,7 +503,7 @@ class ResNetRobertaFinetuning(RobertaPreTrainedModel):
         '''
         ###for image
         # import pdb; pdb.set_trace()
-        add_image_token(self.roberta)
+        #add_image_token(self.roberta)
         
         proj_image_features, d_image_encoder = init_image_encoder(self.image_model_name, self.frozen_image_encoder, self.num_image_tokens, self.d_text_encoder)
         
@@ -546,7 +546,7 @@ class ResNetRobertaFinetuning(RobertaPreTrainedModel):
 
                 inputs_embeds[i][ind] = image_features_list[i].type(inputs_embeds[i].dtype)
 
-        reduce_image_token(self.roberta)
+        #reduce_image_token(self.roberta)
        
 
         # Encode everything
@@ -643,7 +643,7 @@ class ResNetRobertaForPromptFinetuning(RobertaPreTrainedModel):
         '''
         ###for image
         # import pdb; pdb.set_trace()
-        add_image_token(self.roberta)
+        #add_image_token(self.roberta)
         
         proj_image_features, d_image_encoder = init_image_encoder(self.image_model_name, self.frozen_image_encoder, self.num_image_tokens, self.d_text_encoder)
         
@@ -685,7 +685,7 @@ class ResNetRobertaForPromptFinetuning(RobertaPreTrainedModel):
 
                 inputs_embeds[i][ind] = image_features_list[i].type(inputs_embeds[i].dtype)
 
-        reduce_image_token(self.roberta)
+        #reduce_image_token(self.roberta)
        
 
         # Encode everything
@@ -843,7 +843,7 @@ class FusionContrastiveResNetRobertaForPromptFinetuning(RobertaPreTrainedModel):
         if encoder_forward is False:
             logits_list = []
             for t in range(views):
-                add_image_token(self.roberta)
+                #add_image_token(self.roberta)
                 input_ids_new = input_ids[:, t, :]
                 # print('---------------------------------the shape of input_ids_new is {}'.format(input_ids_new.shape))
                 attention_mask_new=attention_mask[:, t, :]
@@ -880,11 +880,19 @@ class FusionContrastiveResNetRobertaForPromptFinetuning(RobertaPreTrainedModel):
                 for i in range(batch_size):
                     # replace <image> tokens with image_features
                     if image_token_mask_new[i] is not None:
-                        ind = image_token_mask_new[i].nonzero(as_tuple=True)
-
-                        inputs_embeds_new[i][ind] = image_features_list[i].type(inputs_embeds_new[i].dtype)
+                        ind = image_token_mask_new[i].nonzero(as_tuple=True)[0]
+                        n_pos = ind.numel()
+                        feat = image_features_list[i]
+                        if feat.size(0) != n_pos:
+                            if feat.size(0) > n_pos:
+                                feat = feat[:n_pos, :]
+                            else:
+                                repeat = (n_pos + feat.size(0) - 1) // feat.size(0)
+                                feat = feat.repeat(repeat, 1)[:n_pos, :]
+                        #inputs_embeds_new[i][ind] = image_features_list[i].type(inputs_embeds_new[i].dtype)
+                        inputs_embeds_new[i, ind, :] = feat.to(dtype=inputs_embeds_new.dtype)
                 
-                reduce_image_token(self.roberta)
+                #reduce_image_token(self.roberta)
                 
                 # Encode everything
                 if inputs_embeds_new is not None:
@@ -1016,7 +1024,7 @@ class FusionContrastiveResNetRobertaForPromptFinetuning(RobertaPreTrainedModel):
         else:  #### encoder_forward is True
             all_mlp_output = []
             for t in range(views):
-                add_image_token(self.roberta)
+                #add_image_token(self.roberta)
                 input_ids_new = input_ids[:, t, :]
                 attention_mask_new=attention_mask[:, t, :]
                 mask_pos_new = mask_pos[:, t, :]
@@ -1056,7 +1064,7 @@ class FusionContrastiveResNetRobertaForPromptFinetuning(RobertaPreTrainedModel):
 
                         inputs_embeds_new[i][ind] = image_features_list[i].type(inputs_embeds_new[i].dtype)
                 
-                reduce_image_token(self.roberta)
+                #reduce_image_token(self.roberta)
                 # Encode everything
                 if inputs_embeds_new is not None:
                     outputs = self.roberta(
@@ -1166,7 +1174,7 @@ class FusionContrastiveResNetBertForPromptFinetuning(BertPreTrainedModel):
         if encoder_forward is False:
             logits_list = []
             for t in range(views):
-                add_image_token(self.roberta)
+                #add_image_token(self.roberta)
                 input_ids_new = input_ids[:, t, :]
                 # print('---------------------------------the shape of input_ids_new is {}'.format(input_ids_new.shape))
                 attention_mask_new=attention_mask[:, t, :]
@@ -1208,7 +1216,7 @@ class FusionContrastiveResNetBertForPromptFinetuning(BertPreTrainedModel):
 
                         inputs_embeds_new[i][ind] = image_features_list[i].type(inputs_embeds_new[i].dtype)
                 
-                reduce_image_token(self.roberta)
+                #reduce_image_token(self.roberta)
                 
                 # Encode everything
                 if inputs_embeds_new is not None:
@@ -1341,7 +1349,7 @@ class FusionContrastiveResNetBertForPromptFinetuning(BertPreTrainedModel):
         else:  #### encoder_forward is True
             all_mlp_output = []
             for t in range(views):
-                add_image_token(self.roberta)
+                #add_image_token(self.roberta)
                 input_ids_new = input_ids[:, t, :]
                 token_type_ids_new = token_type_ids[:, t, :]
                 attention_mask_new=attention_mask[:, t, :]
@@ -1382,7 +1390,7 @@ class FusionContrastiveResNetBertForPromptFinetuning(BertPreTrainedModel):
 
                         inputs_embeds_new[i][ind] = image_features_list[i].type(inputs_embeds_new[i].dtype)
                 
-                reduce_image_token(self.roberta)
+                #reduce_image_token(self.roberta)
                 # Encode everything
                 if inputs_embeds_new is not None:
                     outputs = self.roberta(

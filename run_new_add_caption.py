@@ -404,6 +404,62 @@ class DynamicTrainingArguments(TrainingArguments):
     #     metadata={"help": "eval batch_size"}
     # )
 
+def sync_vocab_and_tie(model, tokenizer):
+    """
+    确保模型词表相关的所有模块与 tokenizer 的大小一致（包含 lm_head.decoder/bias）。
+    需要在 `tokenizer.add_special_tokens(...)` 之后、训练前调用。
+    """
+    import torch
+    new_vocab_size = len(tokenizer)
+
+    # 1) 先把 embedding 调整到新词表大小
+    model.resize_token_embeddings(new_vocab_size)
+    model.config.tie_word_embeddings = True
+    model.tie_weights()
+    # 2) 同步到 config，避免某些子模块仍读旧的 vocab_size
+    if hasattr(model, "config"):
+        model.config.vocab_size = new_vocab_size
+
+    # 3) 重新 tie（让 decoder.weight 与 embedding 共享权重）
+    if hasattr(model, "tie_weights"):
+        try:
+            model.tie_weights()
+        except Exception:
+            pass
+
+    # 4) 兜底：确保 lm_head 的 out_features/bias 与词表大小一致
+    # Roberta: lm_head.decoder；BERT: cls.predictions.decoder（若用 MLM 头）
+    def _fix_decoder_and_bias(decoder_module, device=None, dtype=None):
+        if decoder_module is None:
+            return
+        # bias
+        if hasattr(decoder_module, "bias"):
+            if decoder_module.bias is None or decoder_module.bias.shape[0] != new_vocab_size:
+                decoder_module.bias = torch.nn.Parameter(
+                    torch.zeros(new_vocab_size, device=device, dtype=dtype)
+                )
+
+    # roberta 路径
+    if hasattr(model, "lm_head") and hasattr(model.lm_head, "decoder"):
+        dec = model.lm_head.decoder
+        _fix_decoder_and_bias(model.lm_head, device=dec.weight.device, dtype=dec.weight.dtype)
+
+        # 如未成功 tie，到这里强绑一次（共享同一块 weight）
+        if hasattr(model, "roberta"):
+            emb = model.roberta.embeddings.word_embeddings
+            if dec.weight.shape != emb.weight.shape or dec.weight.data_ptr() != emb.weight.data_ptr():
+                model.lm_head.decoder.weight = emb.weight
+
+    # bert 路径（你的 bert 类里定义的是 self.cls = BertOnlyMLMHead）
+    if hasattr(model, "cls") and hasattr(model.cls, "predictions"):
+        pred = model.cls.predictions
+        if hasattr(pred, "decoder"):
+            dec = pred.decoder
+            _fix_decoder_and_bias(pred, device=dec.weight.device, dtype=dec.weight.dtype)
+            if hasattr(model, "bert"):
+                emb = model.bert.embeddings.word_embeddings
+                if dec.weight.shape != emb.weight.shape or dec.weight.data_ptr() != emb.weight.data_ptr():
+                    pred.decoder.weight = emb.weight
 
 
 
@@ -417,6 +473,7 @@ def main():
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     training_args.local_rank = -1 
+    training_args.save_safetensors = False
     #### print the training args
     for arg in vars(training_args):
         print(arg, getattr(training_args, arg))
@@ -743,7 +800,8 @@ def main():
             config=config,
             cache_dir=model_args.cache_dir,
         )
-    # model.resize_token_embeddings(len(tokenizer)) 
+    sync_vocab_and_tie(model, tokenizer)
+    #model.resize_token_embeddings(len(tokenizer)) 
    
     # For BERT, increase the size of the segment (token type) embeddings
     if config.model_type == 'bert':
@@ -824,7 +882,7 @@ def main():
       
         # import pdb; pdb.set_trace() ##debug
         model = model_fn.from_pretrained(training_args.output_dir, opt=model_args)
-
+        sync_vocab_and_tie(model, tokenizer)
         model = model.to(training_args.device)
         trainer.model = model
         if data_args.prompt:
