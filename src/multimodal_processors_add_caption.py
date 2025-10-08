@@ -330,3 +330,75 @@ class AddCaptionMASADMultimodalClassificationProcessor(DataProcessor):
             examples.append(MultimodalInputExample
                             (guid=guid, text_a=text_a, aspect=aspect, image_path=image_path, image_caption=image_caption, label=label))
         return examples
+    
+class AddCaptionT2015MultimodalClassificationProcessor(DataProcessor):
+    """
+    Data processor for T2015 multimoal(text+image) classification datasets.
+    """
+
+    def __init__(self, task_name):
+        self.task_name = task_name
+        self.label_map = {'0': 'negative', '1': 'neutral', '2': 'positive'}
+        
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return MultimodalInputExample(
+            tensor_dict["idx"].numpy(),
+            tensor_dict["sentence"].numpy().decode("utf-8"),
+            None,
+            tensor_dict["image_path"].numpy().decode("utf-8"), 
+            tensor_dict["image_caption"].numpy().decode("utf-8"),
+            tensor_dict["aspect"].numpy().decode("utf-8"),
+            str(self.label_map[tensor_dict["label"].numpy().decode("utf-8")]),
+        ) 
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        file_name = os.path.join(data_dir, 'train.json')
+        train_dataset=[]
+        with open(file_name, 'r') as f:
+            for line in f:
+                json_line = json.loads(line)
+                # print(json_line)
+                train_dataset.append(json_line)
+        return self._create_examples(train_dataset, "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        file_name = os.path.join(data_dir, 'val.json')
+        dev_dataset=[]
+        with open(file_name, 'r') as f:
+            for line in f:
+                json_line = json.loads(line)
+                # print(json_line)
+                dev_dataset.append(json_line)
+        return self._create_examples(dev_dataset, "dev")
+
+    def get_test_examples(self, data_dir):
+        """See base class."""
+        file_name = os.path.join(data_dir, 'test.json')
+        test_dataset=[]
+        with open(file_name, 'r') as f:
+            for line in f:
+                json_line = json.loads(line)
+                # print(json_line)
+                test_dataset.append(json_line)
+        return self._create_examples(test_dataset, "test")
+    
+    def get_labels(self):
+        """See base class."""
+        return ["negative", "neutral", "positive"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training, dev and test sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            guid = "%s-%s" % (set_type, line['id'])
+            text_a = line['text']
+            aspect = line['aspect']
+            image_path = line['image']
+            image_caption = line['caption']
+            label = self.label_map[line['label']]
+            examples.append(MultimodalInputExample
+                            (guid=guid, text_a=text_a, aspect=aspect, image_path=image_path, image_caption=image_caption, label=label))
+        return examples

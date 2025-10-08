@@ -127,7 +127,7 @@ def convert(tsv_path: Path, out_path: Path, image_base: Path, mode: str):
 
 def main():
     # ======= 按你的固定路径习惯来 =======
-    dataset_name = "mvsa-s"      # e.g. mvsa-s / mvsa-m / tumemo / t2015 / t2017 / masad
+    dataset_name = "t2017"      # e.g. mvsa-s / mvsa-m / tumemo / t2015 / t2017 / masad
     split = "train_few1"         # e.g. train / dev / test / train_few1
 
     # 根据数据集名选择 coarse/fine

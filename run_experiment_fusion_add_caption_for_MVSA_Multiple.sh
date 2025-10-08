@@ -61,7 +61,7 @@ do
             do
                 for train_batch_size in 8
                 do
-                    for lr in 5e-6 1e-6 3e-6 1e-5
+                    for lr in 1e-6 3e-6 5e-6 8e-6 1e-5 2e-5
                     do
                         for SEED in 13 #21 42 87 100 
                         do

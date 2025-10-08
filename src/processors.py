@@ -13,7 +13,7 @@ import itertools
 import random
 import transformers
 from src.multimodal_processors import MultimodalInputExample, MultimodalClassificationProcessor, TumblrMultimodalClassificationProcessor
-from src.multimodal_processors_add_caption import AddCaptionMVSAClassificationProcessor, AddCaptionTumblrMultimodalClassificationProcessor
+from src.multimodal_processors_add_caption import AddCaptionMVSAClassificationProcessor, AddCaptionTumblrMultimodalClassificationProcessor,AddCaptionT2015MultimodalClassificationProcessor
 from transformers.data.processors.utils import InputFeatures
 from transformers import DataProcessor, InputExample
 from transformers.data.processors.glue import *
@@ -258,12 +258,13 @@ processors_mapping = {
     "mul_mvsa_single_contrastive_fusion_add_caption": AddCaptionMVSAClassificationProcessor('mul_mvsa_single_contrastive_fusion_add_caption'),
     "mul_mvsa_multiple_fusion_add_caption": AddCaptionMVSAClassificationProcessor('mul_mvsa_multiple_fusion_add_caption'),
     "mul_tumblr_fusion_add_caption": AddCaptionTumblrMultimodalClassificationProcessor('mul_tumblr_fusion_add_caption'),
+    "mul_t2015_contrastive_fusion_add_caption": AddCaptionT2015MultimodalClassificationProcessor('mul_t2015_contrastive_fusion_add_caption'),
 }
 
 num_labels_mapping = {
     "mul_mvsa_single_fusion_add_caption": 3,
     "mul_mvsa_single_contrastive_fusion_add_caption": 3,
-
+    "mul_t2015_contrastive_fusion_add_caption" : 3,
     "mul_mvsa_multiple_fusion_add_caption": 3,
 
     "mul_tumbl_fusion_add_caption": 7,
@@ -273,6 +274,7 @@ output_modes_mapping = {
     "mul_mvsa_single_fusion_add_caption":"classification",
     "mul_mvsa_single_contrastive_fusion_add_caption": "classification",
     "mul_mvsa_multiple_fusion_add_caption": "classification",
+    "mul_t2015_contrastive_fusion_add_caption": "classification",
     "mul_tumbl_fusion_add_caption": "classification",
 }
 
@@ -280,6 +282,7 @@ output_modes_mapping = {
 compute_metrics_mapping = {
     "mul_mvsa_single_fusion_add_caption": multimodal_classification_metrics,
     "mul_mvsa_single_contrastive_fusion_add_caption": multimodal_classification_metrics,
+    "mul_t2015_contrastive_fusion_add_caption": multimodal_classification_metrics,
     "mul_mvsa_multiple_fusion_add_caption": multimodal_classification_metrics,
     "mul_tumbl_fusion_add_caption": tumblr_classification_metrics,
 }

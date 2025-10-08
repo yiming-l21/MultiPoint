@@ -8,7 +8,7 @@
 # MODEL: pre-trained model name (roberta-*, bert-*), see Transformers model list
 export TOKENIZERS_PARALLELISM=false
 # Number of training instances per label
-TASK=Mul_MVSA_Single_Contrastive_Fusion_Add_Caption
+TASK=Mul_T2015_Contrastive_Fusion_Add_Caption
 MODEL=/home/lym/MultiPoint/models/roberta-large
 TYPE=prompt
 TAG=######################################################################\n
@@ -67,7 +67,7 @@ do
                         do
                             CUDA_VISIBLE_DEVICES=2 python run_new_add_caption.py \
                             --task_name $TASK \
-                            --data_dir /home/lym/MultiPoint/datasets/mvsa-s \
+                            --data_dir /home/lym/MultiPoint/datasets/t2015 \
                             --add_image $ADD_IMAGE \
                             --image_model_name $IMAGE_MODEL_NAME \
                             --num_image_tokens $NUM_IMAGE_TOKENS \

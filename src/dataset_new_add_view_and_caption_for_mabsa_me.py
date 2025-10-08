@@ -572,10 +572,10 @@ def tokenize_multipart_input_add_image(
                 # Just natural language prompt
                 part = part.replace('_', ' ') 
                 # handle special case when T5 tokenizer might add an extra space
-                if len(part) == 1:
-                    new_tokens.append(tokenizer._convert_token_to_id(part))
-                else:
-                    new_tokens += enc(part)
+                # if len(part) == 1:
+                #     new_tokens.append(tokenizer._convert_token_to_id(part))
+                # else:
+                new_tokens += enc(part)
 
             if (part[:4] == 'sent' or part[1:5] == 'sent') and part!=' sentiment of text :' and part!=' sentiment' and part!=" sentiment of aspect :":
                 # If this part is the sentence, limit the sentence length
@@ -710,15 +710,20 @@ class FewShotDataset_AddCaption(torch.utils.data.Dataset):
             self.label_to_word = eval(args.mapping)
 
             for key in self.label_to_word:
-                # For RoBERTa/BART/T5, tokenization also considers space, so we use space+word as label words.
                 if self.label_to_word[key][0] not in ['<', '[', '.', ',']:
-                    # Make sure space+word is in the vocabulary
-                    assert len(tokenizer.tokenize(' ' + self.label_to_word[key])) == 1
-                    self.label_to_word[key] = tokenizer._convert_token_to_id(tokenizer.tokenize(' ' + self.label_to_word[key])[0])
+                    tok_list = tokenizer.tokenize(' ' + self.label_to_word[key])
+                    assert len(tok_list) == 1, (
+                        f"Label '{key}' -> '{self.label_to_word[key]}' 未被分成单个 token；"
+                        f"请确认使用了 add_prefix_space=True，或更换一个映射词。"
+                    )
+                    tok_id = tokenizer.convert_tokens_to_ids(tok_list[0])
                 else:
-                    self.label_to_word[key] = tokenizer._convert_token_to_id(self.label_to_word[key])
-                logger.info("Label {} to word {} ({})".format(key, tokenizer._convert_id_to_token(self.label_to_word[key]), self.label_to_word[key]))
-            
+                    tok_id = tokenizer.convert_tokens_to_ids(self.label_to_word[key])
+
+                self.label_to_word[key] = tok_id
+                tok_str = tokenizer.convert_ids_to_tokens([tok_id])[0]
+                logger.info("Label %s to word %s (%d)", key, tok_str, tok_id)
+
             if len(self.label_list) > 1:
                 self.label_word_list = [self.label_to_word[label] for label in self.label_list]
             else:
