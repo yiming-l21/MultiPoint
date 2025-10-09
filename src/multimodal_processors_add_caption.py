@@ -173,7 +173,7 @@ class AddCaptionTumblrMultimodalClassificationProcessor(DataProcessor):
     
     def get_labels(self):
         """See base class."""
-        return ["angry", "bored", "calm", "fear", "happy", "love", "sad"]
+        return ["Angry", "Bored", "Calm", "Fear", "Happy", "Love", "Sad"]
 
     def _create_examples(self, lines, set_type):
         """Creates examples for the training, dev and test sets."""

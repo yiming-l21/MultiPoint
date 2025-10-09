@@ -39,7 +39,7 @@ def parse_row_coarse(row):
         raise ValueError(f"Coarse row has <4 fields: {row}")
 
     index = row[0].strip()
-    label = row[1].strip().lower()
+    label = row[1].strip()
     image_id = row[2].strip()
     text = row[3].strip()
     caption = "\t".join(r.strip() for r in row[4:]).strip() if len(row) >= 5 else ""
@@ -127,7 +127,7 @@ def convert(tsv_path: Path, out_path: Path, image_base: Path, mode: str):
 
 def main():
     # ======= 按你的固定路径习惯来 =======
-    dataset_name = "t2017"      # e.g. mvsa-s / mvsa-m / tumemo / t2015 / t2017 / masad
+    dataset_name = "tumemo"      # e.g. mvsa-s / mvsa-m / tumemo / t2015 / t2017 / masad
     split = "train_few1"         # e.g. train / dev / test / train_few1
 
     # 根据数据集名选择 coarse/fine

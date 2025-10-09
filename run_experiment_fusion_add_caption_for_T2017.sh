@@ -8,7 +8,7 @@
 # MODEL: pre-trained model name (roberta-*, bert-*), see Transformers model list
 export TOKENIZERS_PARALLELISM=false
 # Number of training instances per label
-TASK=Mul_MVSA_Single_Contrastive_Fusion_Add_Caption
+TASK=Mul_T2017_Contrastive_Fusion_Add_Caption
 MODEL=/home/lym/MultiPoint/models/roberta-large
 TYPE=prompt
 TAG=######################################################################\n
@@ -30,11 +30,15 @@ IMAGE_MODEL_NAME=nf_resnet50
 IMAGE_TOKEN="<image>_0"
 PROMPT_TOKEN="<prompt>"
 
-TEMPLATE1=*cls*$IMAGE_TOKEN*is*caption_0*sep+**sent_0*_It_was*mask*.*sep+* 
-TEMPLATE2=*cls*$IMAGE_TOKEN*is*caption_0*sep+*_The_sentense_\"*sent_0*\"_has*mask*_sentiment*sep+* 
-TEMPLATE3=*cls*$IMAGE_TOKEN*is*caption_0*sep+*$PROMPT_TOKEN*mask*$PROMPT_TOKEN*sent_0*$PROMPT_TOKEN*sep+*
+# TEMPLATE1=*cls*$IMAGE_TOKEN*is*caption_0*sep+**sent_0*_It_was*mask*.*sep+* 
+# TEMPLATE2=*cls*$IMAGE_TOKEN*is*caption_0*sep+*_The_sentense_\"*sent_0*\"_has*mask*_sentiment*sep+* 
+# TEMPLATE3=*cls*$IMAGE_TOKEN*is*caption_0*sep+*$PROMPT_TOKEN*mask*$PROMPT_TOKEN*sent_0*$PROMPT_TOKEN*sep+*
 
-TEMPLATE4=*cls*$IMAGE_TOKEN*is*caption_0*sep+*Text_:_\"*sent_0*\"_.*_sentiment_of_text_:*mask*.*sep+*
+# TEMPLATE4=*cls*$IMAGE_TOKEN*is*caption_0*sep+*Text_:_\"*sent_0*\"_.*_sentiment_of_text_:*mask*.*sep+*
+TEMPLATE1=*cls*$IMAGE_TOKEN*is*caption_0*sep+**sent_0**It_was*mask**about**aspect_0*.*sep+*
+TEMPLATE2=*cls*$IMAGE_TOKEN*is*caption_0*sep+**_The_sentense_*"*sent_0*"*has**mask***_sentiment**about**aspect_0*.*sep+*
+TEMPLATE3=*cls*$IMAGE_TOKEN*is*caption_0*sep+*$PROMPT_TOKEN*mask*$PROMPT_TOKEN*sent_0*$PROMPT_TOKEN*aspect_0*$PROMPT_TOKEN*sep+*
+TEMPLATE4=*cls*$IMAGE_TOKEN*is*caption_0*sep+*Text*:*"*sent_0*"*.*Aspect*:*aspect_0*.*_sentiment_of_text_:*mask*.*sep+*
 
 
 MAPPING="{'negative':'terrible','neutral':'okay','positive':'great'}"
@@ -57,17 +61,17 @@ do
     do
         for NUM_IMAGE_TOKENS in 1
         do
-            for num_prompt_tokens in 2
+            for num_prompt_tokens in 2 4
             do
                 for train_batch_size in 8
                 do
-                    for lr in 1e-6 3e-6 5e-6 8e-6 1e-5 2e-5
+                    for lr in 8e-6 9e-6 1e-5 1.1e-5 1.2e-5 1.3e-5 1.4e-5 1.5e-5 1.6e-5
                     do
                         for SEED in 13 #21 42 87 100
                         do
                             CUDA_VISIBLE_DEVICES=5 python run_new_add_caption.py \
                             --task_name $TASK \
-                            --data_dir /home/lym/MultiPoint/datasets/mvsa-s \
+                            --data_dir /home/lym/MultiPoint/datasets/t2017 \
                             --add_image $ADD_IMAGE \
                             --image_model_name $IMAGE_MODEL_NAME \
                             --num_image_tokens $NUM_IMAGE_TOKENS \

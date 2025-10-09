@@ -245,7 +245,7 @@ def multimodal_classification_metrics(task_name, preds, labels):
 
 def tumblr_classification_metrics(task_name, preds, labels):
     
-    label_list = ["angry", "bored", "calm", "fear", "happy", "love", "sad"]
+    label_list = ["Angry", "Bored", "Calm", "Fear", "Happy", "Love", "Sad"]
     labels_list = [i for i in range(len(label_list))]
     report = metrics.classification_report(labels, preds, labels=labels_list, target_names=label_list, digits=5, output_dict=True)
     return {"acc": (preds == labels).mean(),
@@ -258,16 +258,19 @@ processors_mapping = {
     "mul_mvsa_single_contrastive_fusion_add_caption": AddCaptionMVSAClassificationProcessor('mul_mvsa_single_contrastive_fusion_add_caption'),
     "mul_mvsa_multiple_fusion_add_caption": AddCaptionMVSAClassificationProcessor('mul_mvsa_multiple_fusion_add_caption'),
     "mul_tumblr_fusion_add_caption": AddCaptionTumblrMultimodalClassificationProcessor('mul_tumblr_fusion_add_caption'),
+    "mul_tumblr_contrastive_fusion_add_caption": AddCaptionTumblrMultimodalClassificationProcessor('mul_tumblr_contrastive_fusion_add_caption'),
     "mul_t2015_contrastive_fusion_add_caption": AddCaptionT2015MultimodalClassificationProcessor('mul_t2015_contrastive_fusion_add_caption'),
+    "mul_t2017_contrastive_fusion_add_caption": AddCaptionT2015MultimodalClassificationProcessor('mul_t2017_contrastive_fusion_add_caption'),
 }
 
 num_labels_mapping = {
     "mul_mvsa_single_fusion_add_caption": 3,
     "mul_mvsa_single_contrastive_fusion_add_caption": 3,
     "mul_t2015_contrastive_fusion_add_caption" : 3,
+    "mul_t2017_contrastive_fusion_add_caption" : 3,
     "mul_mvsa_multiple_fusion_add_caption": 3,
-
-    "mul_tumbl_fusion_add_caption": 7,
+    "mul_tumblr_contrastive_fusion_add_caption": 7,
+    "mul_tumblr_fusion_add_caption": 7,
 }
 
 output_modes_mapping = {
@@ -275,7 +278,9 @@ output_modes_mapping = {
     "mul_mvsa_single_contrastive_fusion_add_caption": "classification",
     "mul_mvsa_multiple_fusion_add_caption": "classification",
     "mul_t2015_contrastive_fusion_add_caption": "classification",
-    "mul_tumbl_fusion_add_caption": "classification",
+    "mul_t2017_contrastive_fusion_add_caption": "classification",
+    "mul_tumblr_fusion_add_caption": "classification",
+    "mul_tumblr_contrastive_fusion_add_caption": "classification",
 }
 
 # Return a function that takes (task_name, preds, labels) as inputs
@@ -283,8 +288,10 @@ compute_metrics_mapping = {
     "mul_mvsa_single_fusion_add_caption": multimodal_classification_metrics,
     "mul_mvsa_single_contrastive_fusion_add_caption": multimodal_classification_metrics,
     "mul_t2015_contrastive_fusion_add_caption": multimodal_classification_metrics,
+    "mul_t2017_contrastive_fusion_add_caption": multimodal_classification_metrics,
     "mul_mvsa_multiple_fusion_add_caption": multimodal_classification_metrics,
-    "mul_tumbl_fusion_add_caption": tumblr_classification_metrics,
+    "mul_tumblr_fusion_add_caption": tumblr_classification_metrics,
+    "mul_tumblr_contrastive_fusion_add_caption": tumblr_classification_metrics,
 }
 
 median_mapping = {

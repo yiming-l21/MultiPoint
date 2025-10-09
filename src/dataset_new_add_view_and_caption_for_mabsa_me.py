@@ -459,17 +459,17 @@ def tokenize_multipart_input_add_image(
                 new_input_token = enc(input_text_list[sent_id])
                 if 'tumblr' in task_name :
                     if use_demo==True:
-                        if len(new_input_token) >=45: ###tumblr数据有的太长，截断
+                        if len(new_input_token) >=45: 
                             new_input_token = new_input_token[:45]
                     else:
-                        if len(new_input_token) >=200: ###tumblr数据有的太长，截断
+                        if len(new_input_token) >=200: 
                             new_input_token = new_input_token[:200] 
                 elif 'masad' in task_name :
                     if use_demo==True:
-                        if len(new_input_token) >=200: ###tumblr数据有的太长，截断
+                        if len(new_input_token) >=200:
                             new_input_token = new_input_token[:200]
                     else:
-                        if len(new_input_token) >=450: ###tumblr数据有的太长，截断
+                        if len(new_input_token) >=450: 
                             new_input_token = new_input_token[:450] 
                
                 new_tokens += new_input_token
@@ -577,7 +577,7 @@ def tokenize_multipart_input_add_image(
                 # else:
                 new_tokens += enc(part)
 
-            if (part[:4] == 'sent' or part[1:5] == 'sent') and part!=' sentiment of text :' and part!=' sentiment' and part!=" sentiment of aspect :":
+            if (part[:4] == 'sent' or part[1:5] == 'sent') and part!=' sentiment of text ' and part!=' sentiment of text :' and part!=' sentiment' and part!=" sentiment of aspect :":
                 # If this part is the sentence, limit the sentence length
                 sent_id = int(part.split('_')[1])
                 if sent_id == 0:

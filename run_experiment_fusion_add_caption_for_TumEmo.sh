@@ -8,7 +8,7 @@
 # MODEL: pre-trained model name (roberta-*, bert-*), see Transformers model list
 export TOKENIZERS_PARALLELISM=false
 # Number of training instances per label
-TASK=Mul_MVSA_Single_Contrastive_Fusion_Add_Caption
+TASK=Mul_TumBlr_Contrastive_Fusion_Add_Caption
 MODEL=/home/lym/MultiPoint/models/roberta-large
 TYPE=prompt
 TAG=######################################################################\n
@@ -18,7 +18,7 @@ MAX_STEP=500
 # Validation steps
 EVAL_STEP=100
 
-TEXT_MAX_LENGTH=512
+TEXT_MAX_LENGTH=768
 ADD_IMAGE=True
 EVALUATE_DURING_TRAINING=True
 IMAGE_MODEL_NAME=nf_resnet50
@@ -33,12 +33,10 @@ PROMPT_TOKEN="<prompt>"
 TEMPLATE1=*cls*$IMAGE_TOKEN*is*caption_0*sep+**sent_0*_It_was*mask*.*sep+* 
 TEMPLATE2=*cls*$IMAGE_TOKEN*is*caption_0*sep+*_The_sentense_\"*sent_0*\"_has*mask*_sentiment*sep+* 
 TEMPLATE3=*cls*$IMAGE_TOKEN*is*caption_0*sep+*$PROMPT_TOKEN*mask*$PROMPT_TOKEN*sent_0*$PROMPT_TOKEN*sep+*
-
 TEMPLATE4=*cls*$IMAGE_TOKEN*is*caption_0*sep+*Text_:_\"*sent_0*\"_.*_sentiment_of_text_:*mask*.*sep+*
 
-
-MAPPING="{'negative':'terrible','neutral':'okay','positive':'great'}"
-TASK_EXTRA="--max_seq_len 512"
+MAPPING="{'Angry':'angry','Bored':'bored','Calm':'calm','Fear':'fear','Happy':'happy','Love':'love','Sad':'sad'}"
+TASK_EXTRA="--max_seq_len 768"
 
 # Gradient accumulation steps
 # For medium-sized GPUs (e.g., 2080ti with 10GB memory), they can only take 
@@ -57,17 +55,17 @@ do
     do
         for NUM_IMAGE_TOKENS in 1
         do
-            for num_prompt_tokens in 2
+            for num_prompt_tokens in 2 4 6
             do
                 for train_batch_size in 8
                 do
-                    for lr in 1e-6 3e-6 5e-6 8e-6 1e-5 2e-5
+                    for lr in 3e-6 4e-6 5e-6 7e-6 8e-6 1e-5 1.2e-5 1.4e-5 1.6e-5 1.8e-5 2e-5 3e-5 4e-5 5e-5 7e-5 
                     do
                         for SEED in 13 #21 42 87 100
                         do
-                            CUDA_VISIBLE_DEVICES=5 python run_new_add_caption.py \
+                            CUDA_VISIBLE_DEVICES=7 python run_new_add_caption.py \
                             --task_name $TASK \
-                            --data_dir /home/lym/MultiPoint/datasets/mvsa-s \
+                            --data_dir /home/lym/MultiPoint/datasets/tumemo \
                             --add_image $ADD_IMAGE \
                             --image_model_name $IMAGE_MODEL_NAME \
                             --num_image_tokens $NUM_IMAGE_TOKENS \

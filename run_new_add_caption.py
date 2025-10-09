@@ -522,9 +522,10 @@ def main():
         logger.info("Task name: {}, number of labels: {}, output mode: {}".format(data_args.task_name, num_labels, output_mode))
     except KeyError:
         raise ValueError("Task not found: %s" % (data_args.task_name))
-
+    print("chkp 1")
     # Automatically generate template for using demonstrations
     if model_args.few_shot_type == 'prompt-demo':
+        print("ckhp 1.5")
         logger.info("Automatically convert the template to using demonstrations.")
        
         old_template = data_args.template
@@ -582,7 +583,7 @@ def main():
             
         else:
             print('please check you template2!!!!!!!')
-
+    print("chkp 2")
     print('++++++++++++++++++data_args.template is {}++++++++++++++++++++++++++++++++++++++'.format(data_args.template))   
     print('++++++++++++++++++data_args.template2 is {}++++++++++++++++++++++++++++++++++++++'.format(data_args.template2))   
     
@@ -616,12 +617,14 @@ def main():
     elif data_args.task_name == "mul_mvsa_single_contrastive_fusion" or data_args.task_name =="mul_mvsa_multiple_contrastive_fusion" or data_args.task_name == "mul_mvsa_single_contrastive_fusion_add_caption" or data_args.task_name =="mul_mvsa_multiple_contrastive_fusion_add_caption" or data_args.task_name =="mul_tumblr_contrastive_fusion_add_caption" or data_args.task_name == "mul_t2015_contrastive_fusion_add_caption" or data_args.task_name =="mul_t2017_contrastive_fusion_add_caption" or data_args.task_name =="mul_masad_contrastive_fusion_add_caption":
         if 'prompt' in model_args.few_shot_type:
             if config.model_type == 'roberta':
+                print("check branch1")
                 model_fn =FusionContrastiveResNetRobertaForPromptFinetuning
             elif config.model_type == 'bert':
                 model_fn = FusionContrastiveResNetBertForPromptFinetuning
             else:
                 raise NotImplementedError
         elif model_args.few_shot_type == 'finetune':
+            print("check branch2")
             model_fn = AutoModelForSequenceClassification
         else:
             raise NotImplementedError
@@ -718,6 +721,7 @@ def main():
             if training_args.do_predict
             else None
         )
+        print("=---------------------------finish loading the Mul_MVSA_Contrastive_Add_Caption dataset++++++++++++++++=")
     elif data_args.task_name == "mul_t2015_contrastive_add_caption" or data_args.task_name =="mul_t2017_contrastive_add_caption" or  data_args.task_name =="mul_masad_contrastive_add_caption" or data_args.task_name == "mul_t2015_contrastive_fusion_add_caption" or data_args.task_name =="mul_t2017_contrastive_fusion_add_caption" or data_args.task_name =="mul_masad_contrastive_fusion_add_caption" : 
         train_dataset = (
             FewShotDataset_AddCaption_MABSA(data_args, tokenizer=tokenizer, mode="train", use_demo=("demo" in model_args.few_shot_type),
@@ -776,6 +780,7 @@ def main():
         # print('+++++++++++++++++++++++the new_num_embeddings is {}'.format(model.get_input_embeddings().num_embeddings))
     elif data_args.task_name == "mul_mvsa_single_contrastive" or data_args.task_name =="mul_mvsa_multiple_contrastive" or  data_args.task_name =="mul_tumblr_contrastive" or data_args.task_name == "mul_mvsa_single_contrastive_fusion" or data_args.task_name =="mul_mvsa_multiple_contrastive_fusion" or data_args.task_name == "mul_mvsa_single_contrastive_add_caption" or data_args.task_name =="mul_mvsa_multiple_contrastive_add_caption"  or data_args.task_name == "mul_mvsa_single_contrastive_fusion_add_caption" or data_args.task_name =="mul_mvsa_multiple_contrastive_fusion_add_caption" or data_args.task_name =="mul_tumblr_contrastive_fusion_add_caption" or data_args.task_name == "mul_t2015_contrastive_add_caption" or data_args.task_name =="mul_t2017_contrastive_add_caption" or  data_args.task_name =="mul_masad_contrastive_add_caption" or data_args.task_name == "mul_t2015_contrastive_fusion_add_caption" or data_args.task_name =="mul_t2017_contrastive_fusion_add_caption" or data_args.task_name =="mul_masad_contrastive_fusion_add_caption" or data_args.task_name == "mul_t2015_contrastive" or data_args.task_name =="mul_t2017_contrastive" or  data_args.task_name =="mul_masad_contrastive":
         # import ipdb; ipdb.set_trace()
+        print('+++++++++++++++++++++++contrastive model branch++++++++++++++++++++++++++++++')
         if training_args.do_train:
             model = model_fn.from_pretrained(
             model_args.model_name_or_path,
